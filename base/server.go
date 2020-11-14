@@ -24,7 +24,7 @@ type SocketEvent interface {
 	OnClose(message *Message)
 }
 
-func Receive(connection net.Conn, event *SocketEvent) {
+func Receive(connection net.Conn, boot Boot) {
 	buf := make([]byte, 1024) //1kb
 	var data []byte
 
@@ -45,13 +45,15 @@ func Receive(connection net.Conn, event *SocketEvent) {
 		}
 	}
 
-	msg := string(data)
-	log.Println(msg)
+	//TODO: Response 하는부분 설계해야함
+	go boot.Callback.OnMessageReceive(&Message{Json: string(data), Action: ON_MSG_RECEIVE})
 }
 
 func ServerStart(boot Boot) {
 	listener, error := net.Listen(boot.Protocol, boot.Port)
 	boot.Callback.OnConnect(&Message{Json: "connect", Action: ON_CONNECT})
+
+	log.Println(boot)
 	log.Println(boot.ServerName + " get started port: " + boot.Port)
 
 	if error != nil {
@@ -67,7 +69,7 @@ func ServerStart(boot Boot) {
 			continue
 		}
 
-		go Receive(conn, &boot.Callback)
+		go Receive(conn, boot)
 	}
 
 	boot.Callback.OnClose(&Message{Json: "close", Action: ON_CLOSE})
