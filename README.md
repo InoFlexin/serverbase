@@ -1,7 +1,7 @@
-# Server, Client Framework - NWServerBaseFramework
-서버, 클라이언트 개발을 EventListener 기반으로 쉽고 빠르게 개발 할 수있도록 만들어진 golang socket framework 입니다.  
+# 🏬 Server, Client Framework - NWServerBaseFramework
+서버, 클라이언트 개발을 EventListener 기반으로 쉽고 빠르게 개발 할 수있도록 만들어진  golang socket framework 입니다.  
 
-# How to use server framework?
+# 💻 How to use server framework?
 ```go
 package main
 
@@ -43,7 +43,7 @@ func main() {
 }
 ```
 
-# How to use client framework?
+# 💻 How to use client framework?
 ```go
 package main
 
@@ -95,5 +95,14 @@ func main() {
 }
 ```
 
-# 개발자
+# 📂 Updates
+- v1.0.1
+    - Server/Client Socket Option 구조체
+    - EventListener interface 정의
+    - 예제 작성
+    - Server/Client Logic 정의
+    - goroutine sync 지원
+    - session 지원
+
+# 🙋‍ 개발자
 남대영 - wsnam0507@gmail.com
