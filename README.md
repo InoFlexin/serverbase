@@ -31,10 +31,10 @@ func main() {
 
 	ev := MyMessage{} // 서버 이벤트 선언
 	boot := base.Boot{Protocol: "tcp",
-										Port: ":5092",
-										ServerName: "test_server",
-										Callback: ev,
-										ReceiveSize: 1024}
+                      Port: ":5092",
+                      ServerName: "test_server",
+                      Callback: ev,
+                      ReceiveSize: 1024}
 	// server boot option 설정
 
 	wg.Add(1) // synchronized gorutine
@@ -76,10 +76,10 @@ func main() {
 
 		event := MyClientMessage{}
 		clientBoot := client.ClientBoot{Protocol: "tcp",
-																		HostAddr: "localhost",
-																		HostPort: ":5092",
-																		Callback: event, 
-																		BufferSize: 1024}		
+                                        HostAddr: "localhost",
+                                        HostPort: ":5092",
+                                        Callback: event, 
+                                        BufferSize: 1024}		
 		wg.Add(1) // synchronized goroutine
 		go client.ConnectServer(&clientBoot, &wg)
 		wg.Wait()
