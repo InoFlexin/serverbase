@@ -19,9 +19,26 @@ type Message struct {
 }
 
 type SocketEvent interface {
-	OnMessageReceive(message *Message)
-	OnConnect(message *Message)
+	OnMessageReceive(message *Message, client net.Conn)
+	OnConnect(message *Message, client net.Conn)
 	OnClose(message *Message)
+}
+
+/*
+	Please running goroutine
+*/
+func Broadcast(message *Message) {
+	keys, values := GetSessions()
+	length := len(keys)
+
+	for i := 0; i < length; i++ {
+		conn := values[i]
+		id := keys[i]
+
+		conn.Write([]byte(message.Json))
+
+		log.Printf("Successfully sended data id: " + id)
+	}
 }
 
 func Receive(connection net.Conn, boot Boot) {
@@ -42,16 +59,16 @@ func Receive(connection net.Conn, boot Boot) {
 
 		if count > 0 {
 			data = buf[:count]
+
+			//TODO: Response 하는부분 설계해야함
+			go boot.Callback.OnMessageReceive(&Message{Json: string(data), Action: ON_MSG_RECEIVE}, connection)
 		}
 	}
 
-	//TODO: Response 하는부분 설계해야함
-	go boot.Callback.OnMessageReceive(&Message{Json: string(data), Action: ON_MSG_RECEIVE})
 }
 
 func ServerStart(boot Boot) {
 	listener, error := net.Listen(boot.Protocol, boot.Port)
-	boot.Callback.OnConnect(&Message{Json: "connect", Action: ON_CONNECT})
 
 	log.Println(boot)
 	log.Println(boot.ServerName + " get started port: " + boot.Port)
@@ -60,6 +77,7 @@ func ServerStart(boot Boot) {
 		log.Fatalf("Failed to bind address to "+boot.Port+" err: %v", error)
 	}
 	defer listener.Close()
+	defer boot.Callback.OnClose(&Message{Json: "close", Action: ON_CLOSE})
 
 	for {
 		conn, error := listener.Accept()
@@ -69,8 +87,14 @@ func ServerStart(boot Boot) {
 			continue
 		}
 
-		go Receive(conn, boot)
-	}
+		id, sessionError := AddSession(conn.LocalAddr().String(), conn)
+		boot.Callback.OnConnect(&Message{Json: "connect", Action: ON_CONNECT}, conn)
 
-	boot.Callback.OnClose(&Message{Json: "close", Action: ON_CLOSE})
+		if sessionError == nil {
+			go Receive(conn, boot)
+			log.Printf("Successfully session added id: " + id)
+		} else {
+			log.Fatal(sessionError)
+		}
+	}
 }
