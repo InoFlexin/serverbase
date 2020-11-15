@@ -4,6 +4,7 @@ import (
 	"io"
 	"log"
 	"net"
+	"sync"
 )
 
 type Boot struct {
@@ -43,7 +44,7 @@ func Broadcast(message *Message) {
 }
 
 func Receive(connection net.Conn, boot Boot) {
-	buf := make([]byte, 1024) //1kb
+	buf := make([]byte, boot.ReceiveSize) //1kb
 	var data []byte
 
 	for {
@@ -52,6 +53,7 @@ func Receive(connection net.Conn, boot Boot) {
 		if nil != error {
 			if io.EOF == error {
 				log.Printf("connection is closed from client; %v", connection.RemoteAddr().String())
+				RemoveSession(connection.RemoteAddr().String()) // if client connection refused, remove session.
 			}
 
 			log.Printf("fail to receive data; err: %v", error)
@@ -61,15 +63,13 @@ func Receive(connection net.Conn, boot Boot) {
 		if count > 0 {
 			data = buf[:count]
 
-			//TODO: Response 하는부분 설계해야함
 			go boot.Callback.OnMessageReceive(&Message{Json: string(data), Action: ON_MSG_RECEIVE}, connection)
 		}
 	}
 }
 
-func ServerStart(boot Boot) {
+func ServerStart(boot Boot, wg *sync.WaitGroup) {
 	listener, error := net.Listen(boot.Protocol, boot.Port)
-
 	log.Println(boot)
 	log.Println(boot.ServerName + " get started port: " + boot.Port)
 
@@ -78,6 +78,7 @@ func ServerStart(boot Boot) {
 	}
 	defer listener.Close()
 	defer boot.Callback.OnClose(&Message{Json: "close", Action: ON_CLOSE})
+	wg.Done() //functions end calling wait group done()
 
 	for {
 		conn, error := listener.Accept()

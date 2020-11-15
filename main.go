@@ -2,20 +2,22 @@ package main //simple server example
 
 import (
 	"fmt"
-	"io"
 	"log"
 	"net"
+	"sync"
 	"time"
 
 	"github.com/InoFlexin/serverbase/base"
+	"github.com/InoFlexin/serverbase/client"
 )
 
 type MyMessage base.Message
+type MyClientMessage base.Message
 
 func (m MyMessage) OnMessageReceive(message *base.Message, client net.Conn) {
 	fmt.Println("on message receive: "+message.Json+" action: %d", message.Action)
 
-	base.Broadcast(&base.Message{Json: "Sended from servers", Action: base.ON_MSG_RECEIVE})
+	client.Write([]byte("pong"))
 }
 
 func (m MyMessage) OnConnect(message *base.Message, client net.Conn) {
@@ -26,53 +28,41 @@ func (m MyMessage) OnClose(message *base.Message) {
 	fmt.Printf("on close: "+message.Json+" action: %d", message.Action)
 }
 
-func Ping(server net.Conn) {
-	for {
-		server.Write([]byte("-ping"))
-		time.Sleep(time.Second * 1)
-	}
+func (m MyClientMessage) OnMessageReceive(message *base.Message, server net.Conn) {
+	fmt.Println("client on message receive: "+message.Json+" action: %d", message.Action)
 }
 
-func Read(conn net.Conn) {
-	buf := make([]byte, 1024) //1kb
-	fmt.Println("Read from servers...")
-
-	for {
-		count, error := conn.Read(buf)
-
-		if nil != error {
-			if io.EOF == error {
-				log.Printf("connection is closed from server; %v", conn.RemoteAddr().String())
-			}
-
-			log.Printf("fail to receive data; err: %v", error)
-			return
-		}
-
-		if count > 0 {
-			data := buf[:count]
-			fmt.Println(string(data))
-		}
-	}
+func (m MyClientMessage) OnConnect(message *base.Message, server net.Conn) {
+	fmt.Println("client on connect: "+message.Json+" action: %d", message.Action)
 }
 
-func TestClientConnection() {
-	conn, err := net.Dial("tcp", ":5092")
-
-	if err != nil {
-		log.Fatalf("faild to connec to server err %v", err)
-	}
-	defer conn.Close()
-
-	go Read(conn)
-	Ping(conn)
+func (m MyClientMessage) OnClose(message *base.Message) {
+	fmt.Printf("client on close: "+message.Json+" action: %d", message.Action)
 }
 
 func main() {
-	ev := MyMessage{}
-	boot := base.Boot{Protocol: "tcp", Port: ":5092", ServerName: "test_server", Callback: ev}
+	wg := sync.WaitGroup{} //synchronized goroutine
 
-	go base.ServerStart(boot)
-	time.Sleep(time.Second * 2)
-	TestClientConnection()
+	ev := MyMessage{}
+	boot := base.Boot{Protocol: "tcp", Port: ":5092", ServerName: "test_server", Callback: ev, ReceiveSize: 1024}
+
+	evm := MyClientMessage{}
+	clientBoot := client.ClientBoot{Protocol: "tcp", HostAddr: "localhost", HostPort: ":5092", Callback: evm, BufferSize: 1024}
+
+	wg.Add(1)
+	go base.ServerStart(boot, &wg) //Server open
+	wg.Wait()
+
+	wg.Add(1)
+	go client.ConnectServer(&clientBoot, &wg) //Client request connect to server
+	wg.Wait()
+
+	/*
+		Client test logics
+	*/
+	serverError := client.SendPing(time.Second * 2)
+
+	if serverError != nil {
+		log.Fatal(serverError)
+	}
 }

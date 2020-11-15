@@ -1,9 +1,12 @@
 package client
 
 import (
+	"errors"
 	"io"
 	"log"
 	"net"
+	"sync"
+	"time"
 
 	"github.com/InoFlexin/serverbase/base"
 )
@@ -16,12 +19,34 @@ type ClientBoot struct {
 	BufferSize uint64
 }
 
+var server net.Conn = nil
+
+func CreateError(errorMessage string) error {
+	return errors.New(errorMessage)
+}
+
 func Write(json string, conn net.Conn) {
 	conn.Write([]byte(json))
 }
 
-func Handle(boot *ClientBoot, conn net.Conn) {
-	buf := make([]byte, boot.BufferSize) //1kb
+func SendPing(duration time.Duration) error {
+	var serverError error = nil
+
+	if server != nil {
+		for {
+			Write("ping", server)
+			time.Sleep(duration)
+		}
+	} else {
+		serverError = CreateError("Server not connected error")
+	}
+
+	return serverError
+}
+
+func Handle(boot *ClientBoot, conn net.Conn, wg *sync.WaitGroup) {
+	buf := make([]byte, boot.BufferSize)
+	defer wg.Done() //핸들 처리용 wait group은 밑에 logic이 끝나면 Done 시킨다.
 
 	for {
 		count, error := conn.Read(buf)
@@ -42,15 +67,22 @@ func Handle(boot *ClientBoot, conn net.Conn) {
 	}
 }
 
-func ConnectServer(boot *ClientBoot) {
+func ConnectServer(boot *ClientBoot, wg *sync.WaitGroup) {
+	log.Println("Run")
 	conn, err := net.Dial(boot.Protocol, boot.HostAddr+boot.HostPort)
+	server = conn
 	boot.Callback.OnConnect(&base.Message{Json: "-connect", Action: base.ON_CONNECT}, conn)
 
 	if err != nil {
 		log.Fatalf("faild to connec to server err %v", err)
 	}
+
+	wg.Done()                    //main에서 처리한 waitGroup은 done() 시킨다.
+	handleWg := sync.WaitGroup{} //고루틴 핸들러 처리용 wait group
+	handleWg.Add(1)
+	go Handle(boot, server, &handleWg)
+	handleWg.Wait()
+
 	defer conn.Close()
 	defer boot.Callback.OnClose(&base.Message{Json: "-close", Action: base.ON_CLOSE})
-
-	go Handle(boot, conn)
 }

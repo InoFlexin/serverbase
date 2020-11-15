@@ -20,6 +20,14 @@ func GetSessions() ([]string, []net.Conn) {
 	return keys, values
 }
 
+func RemoveSession(id string) {
+	val := sessionMap[id]
+
+	if val != nil {
+		delete(sessionMap, id)
+	}
+}
+
 func AddSession(id string, conn net.Conn) (string, error) {
 	val := sessionMap[id]
 
