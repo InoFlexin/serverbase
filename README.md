@@ -72,26 +72,26 @@ func (m MyClientMessage) OnClose(message *base.Message) {
 // ==================================================================
 
 func main() {
-		wg := sync.WaitGroup{}
+    wg := sync.WaitGroup{}
 
-		event := MyClientMessage{}
-		clientBoot := client.ClientBoot{Protocol: "tcp",
-                                        HostAddr: "localhost",
-                                        HostPort: ":5092",
-                                        Callback: event, 
-                                        BufferSize: 1024}		
-		wg.Add(1) // synchronized goroutine
-		go client.ConnectServer(&clientBoot, &wg)
-		wg.Wait()
+    event := MyClientMessage{}
+    clientBoot := client.ClientBoot{Protocol: "tcp",
+                                    HostAddr: "localhost",
+                                    HostPort: ":5092",
+                                    Callback: event, 
+                                    BufferSize: 1024}		
+    wg.Add(1) // synchronized goroutine
+    go client.ConnectServer(&clientBoot, &wg)
+    wg.Wait()
 
-		/*
-			해당 프레임워크에서는 클라이언트의 테스트를 위한 SendPing 함수가 존재한다.
-		*/
-		serverError := client.SendPing(time.Second * 2)
-		
-		if serverError != nil {
-				log.Fatal(serverError)
-		}
+    /*
+        해당 프레임워크에서는 클라이언트의 테스트를 위한 SendPing 함수가 존재한다.
+    */
+    serverError := client.SendPing(time.Second * 2)
+    
+    if serverError != nil {
+            log.Fatal(serverError)
+    }
 }
 ```
 
