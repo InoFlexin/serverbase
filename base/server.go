@@ -7,10 +7,11 @@ import (
 )
 
 type Boot struct {
-	Protocol   string //server protocol type (tcp/ip, udp... etc)
-	Port       string
-	ServerName string
-	Callback   SocketEvent
+	Protocol    string //server protocol type (tcp/ip, udp... etc)
+	Port        string
+	ServerName  string
+	Callback    SocketEvent
+	ReceiveSize uint64
 }
 
 type Message struct {
@@ -64,7 +65,6 @@ func Receive(connection net.Conn, boot Boot) {
 			go boot.Callback.OnMessageReceive(&Message{Json: string(data), Action: ON_MSG_RECEIVE}, connection)
 		}
 	}
-
 }
 
 func ServerStart(boot Boot) {
