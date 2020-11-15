@@ -103,6 +103,8 @@ func main() {
     - Server/Client Logic 정의
     - goroutine sync 지원
     - session 지원
+- v1.0.2
+    - Json 기반 통신 지원
 
 # 🙋‍ 개발자
 남대영 - wsnam0507@gmail.com
