@@ -25,16 +25,12 @@ func CreateError(errorMessage string) error {
 	return errors.New(errorMessage)
 }
 
-func Write(json string, conn net.Conn) {
-	conn.Write([]byte(json))
-}
-
 func SendPing(duration time.Duration) error {
 	var serverError error = nil
 
 	if server != nil {
 		for {
-			Write("ping", server)
+			base.Write(&base.Message{Json: "ping", Action: base.ON_MSG_RECEIVE}, server)
 			time.Sleep(duration)
 		}
 	} else {
@@ -62,7 +58,7 @@ func Handle(boot *ClientBoot, conn net.Conn, wg *sync.WaitGroup) {
 
 		if count > 0 {
 			data := buf[:count]
-			boot.Callback.OnMessageReceive(&base.Message{Json: string(data), Action: base.ON_MSG_RECEIVE}, conn)
+			boot.Callback.OnMessageReceive(base.PacketUnmarshal(data), conn)
 		}
 	}
 }

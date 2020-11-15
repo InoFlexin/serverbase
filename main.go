@@ -11,13 +11,16 @@ import (
 	"github.com/InoFlexin/serverbase/client"
 )
 
-type MyMessage base.Message
-type MyClientMessage base.Message
+//Override Server Message Type...
+type (
+	MyMessage       base.Message
+	MyClientMessage base.Message
+)
 
 func (m MyMessage) OnMessageReceive(message *base.Message, client net.Conn) {
 	fmt.Println("on message receive: "+message.Json+" action: %d", message.Action)
 
-	client.Write([]byte("pong"))
+	base.Write(&base.Message{Json: "pong", Action: base.ON_MSG_RECEIVE}, client)
 }
 
 func (m MyMessage) OnConnect(message *base.Message, client net.Conn) {

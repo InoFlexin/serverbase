@@ -1,6 +1,7 @@
 package base
 
 import (
+	"encoding/json"
 	"io"
 	"log"
 	"net"
@@ -17,13 +18,32 @@ type Boot struct {
 
 type Message struct {
 	Json   string
-	Action int //socket actions.
+	Action int
 }
 
 type SocketEvent interface {
 	OnMessageReceive(message *Message, client net.Conn)
 	OnConnect(message *Message, client net.Conn)
 	OnClose(message *Message)
+}
+
+func Write(message *Message, client net.Conn) {
+	//Encoding Message to Json String
+	e, err := json.Marshal(message)
+
+	if err != nil {
+		log.Println(err)
+		return
+	}
+
+	client.Write(e)
+}
+
+func PacketUnmarshal(data []byte) *Message {
+	message := Message{}
+	json.Unmarshal([]byte(data), &message)
+
+	return &message
 }
 
 /*
@@ -35,11 +55,8 @@ func Broadcast(message *Message) {
 
 	for i := 0; i < length; i++ {
 		conn := values[i]
-		id := keys[i]
 
-		conn.Write([]byte(message.Json))
-
-		log.Printf("Successfully sended data id: " + id)
+		Write(message, conn)
 	}
 }
 
@@ -63,7 +80,8 @@ func Receive(connection net.Conn, boot Boot) {
 		if count > 0 {
 			data = buf[:count]
 
-			go boot.Callback.OnMessageReceive(&Message{Json: string(data), Action: ON_MSG_RECEIVE}, connection)
+			message := PacketUnmarshal(data)
+			go boot.Callback.OnMessageReceive(message, connection)
 		}
 	}
 }
