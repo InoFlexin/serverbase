@@ -6,10 +6,10 @@
 package main
 
 import (
-	"fmt"
-	"sync"
+    "fmt"
+    "sync"
 
-	"github.com/InoFlexin/serverbase/base"
+    "github.com/InoFlexin/serverbase/base"
 )
 
 type MyMessage base.Message
@@ -47,12 +47,12 @@ func main() {
 ```go
 package main
 
-import(
-		"fmt"
-		"sync"
+import (
+	"fmt"
+	"sync"
 
-		"github.com/InoFlexin/serverbase/base"
-		"github.com/InoFlexin/serverbase/client"
+	"github.com/InoFlexin/serverbase/base"
+	"github.com/InoFlexin/serverbase/client"
 )
 
 type MyClientMessage base.Message //Client Message 타입 정의
