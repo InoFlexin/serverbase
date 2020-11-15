@@ -94,3 +94,6 @@ func main() {
 		}
 }
 ```
+
+# 개발자
+남대영 - wsnam0507@gmail.com
