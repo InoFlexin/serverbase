@@ -14,6 +14,7 @@ type Boot struct {
 	ServerName  string
 	Callback    SocketEvent
 	ReceiveSize uint64
+	Complex     bool
 }
 
 type Message struct {
@@ -24,7 +25,7 @@ type Message struct {
 type SocketEvent interface {
 	OnMessageReceive(message *Message, client net.Conn)
 	OnConnect(message *Message, client net.Conn)
-	OnClose(message *Message)
+	OnClose(err error)
 }
 
 func Write(message *Message, client net.Conn) {
@@ -60,9 +61,22 @@ func Broadcast(message *Message) {
 	}
 }
 
-func Receive(connection net.Conn, boot Boot) {
+func _receiveAndHandle(buf []byte, connection net.Conn, boot *Boot, count int) {
+	var data = buf[:count]
+	message := PacketUnmarshal(data)
+
+	switch message.Action {
+	case ON_MSG_RECEIVE:
+		go boot.Callback.OnMessageReceive(message, connection)
+		break
+	case ON_CONNECT:
+		go boot.Callback.OnConnect(message, connection)
+		break
+	}
+}
+
+func receive(connection net.Conn, boot Boot) {
 	buf := make([]byte, boot.ReceiveSize) //1kb
-	var data []byte
 
 	for {
 		count, error := connection.Read(buf)
@@ -71,6 +85,7 @@ func Receive(connection net.Conn, boot Boot) {
 			if io.EOF == error {
 				log.Printf("connection is closed from client; %v", connection.RemoteAddr().String())
 				RemoveSession(connection.RemoteAddr().String()) // if client connection refused, remove session.
+				go boot.Callback.OnClose(nil)
 			}
 
 			log.Printf("fail to receive data; err: %v", error)
@@ -78,11 +93,14 @@ func Receive(connection net.Conn, boot Boot) {
 		}
 
 		if count > 0 {
-			data = buf[:count]
-
-			message := PacketUnmarshal(data)
-			go boot.Callback.OnMessageReceive(message, connection)
+			_receiveAndHandle(buf, connection, &boot, count)
 		}
+	}
+}
+
+func SetupComplexServer(boot Boot, wg *sync.WaitGroup) {
+	if boot.Complex {
+		wg.Done()
 	}
 }
 
@@ -94,9 +112,10 @@ func ServerStart(boot Boot, wg *sync.WaitGroup) {
 	if error != nil {
 		log.Fatalf("Failed to bind address to "+boot.Port+" err: %v", error)
 	}
+
 	defer listener.Close()
-	defer boot.Callback.OnClose(&Message{Json: "close", Action: ON_CLOSE})
-	wg.Done() //functions end calling wait group done()
+	defer wg.Done()
+	SetupComplexServer(boot, wg)
 
 	for {
 		conn, error := listener.Accept()
@@ -107,10 +126,9 @@ func ServerStart(boot Boot, wg *sync.WaitGroup) {
 		}
 
 		id, sessionError := AddSession(conn.LocalAddr().String(), conn)
-		boot.Callback.OnConnect(&Message{Json: "connect", Action: ON_CONNECT}, conn)
 
 		if sessionError == nil {
-			go Receive(conn, boot)
+			go receive(conn, boot)
 			log.Printf("Successfully session added id: " + id)
 		} else {
 			log.Fatal(sessionError)

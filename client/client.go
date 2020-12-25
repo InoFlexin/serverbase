@@ -80,5 +80,4 @@ func ConnectServer(boot *ClientBoot, wg *sync.WaitGroup) {
 	handleWg.Wait()
 
 	defer conn.Close()
-	defer boot.Callback.OnClose(&base.Message{Json: "-close", Action: base.ON_CLOSE})
 }
