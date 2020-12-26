@@ -14,16 +14,18 @@ import (
 
 type MyMessage base.Message
 
-func (m MyMessage) OnMessageReceive(message *base.Message) {
+func (m MyMessage) OnMessageReceive(message *base.Message, client net.Conn) {
 	fmt.Println("on message receive: "+message.Json+" action: %d", message.Action)
+
+	base.Write(&base.Message{Json: "pong", Action: base.ON_MSG_RECEIVE}, client)
 }
 
-func (m MyMessage) OnConnect(message *base.Message) {
+func (m MyMessage) OnConnect(message *base.Message, client net.Conn) {
 	fmt.Println("on connect: "+message.Json+" action: %d", message.Action)
 }
 
-func (m MyMessage) OnClose(message *base.Message) {
-	fmt.Printf("on close: "+message.Json+" action: %d", message.Action)
+func (m MyMessage) OnClose(err error) {
+	log.Println(err)
 }
 
 func main() {
@@ -34,7 +36,8 @@ func main() {
                       Port: ":5092",
                       ServerName: "test_server",
                       Callback: ev,
-                      ReceiveSize: 1024}
+                      ReceiveSize: 
+                      Complex: false}
 	// server boot option 설정
 
 	wg.Add(1) // synchronized gorutine
@@ -58,16 +61,18 @@ import (
 type MyClientMessage base.Message //Client Message 타입 정의
 
 // =================== Client Event Listeners ======================
-func (m MyClientMessage) OnMessageReceive(message *base.Message, server net.Conn) {
-	fmt.Println("client on message receive: "+message.Json+" action: %d", message.Action)
+func (m MyMessage) OnMessageReceive(message *base.Message, client net.Conn) {
+	fmt.Println("on message receive: "+message.Json+" action: %d", message.Action)
+
+	base.Write(&base.Message{Json: "pong", Action: base.ON_MSG_RECEIVE}, client)
 }
 
-func (m MyClientMessage) OnConnect(message *base.Message, server net.Conn) {
-	fmt.Println("client on connect: "+message.Json+" action: %d", message.Action)
+func (m MyMessage) OnConnect(message *base.Message, client net.Conn) {
+	fmt.Println("on connect: "+message.Json+" action: %d", message.Action)
 }
 
-func (m MyClientMessage) OnClose(message *base.Message) {
-	fmt.Printf("client on close: "+message.Json+" action: %d", message.Action)
+func (m MyMessage) OnClose(err error) {
+	log.Println(err)
 }
 // ==================================================================
 
@@ -79,7 +84,8 @@ func main() {
                                     HostAddr: "localhost",
                                     HostPort: ":5092",
                                     Callback: event, 
-                                    BufferSize: 1024}		
+                                    BufferSize: 1024
+                                    Complex: true}		
     wg.Add(1) // synchronized goroutine
     go client.ConnectServer(&clientBoot, &wg)
     wg.Wait()
@@ -105,6 +111,10 @@ func main() {
     - session 지원
 - v1.0.2
     - Json 기반 통신 지원
+- v1.0.3
+    - Boot구조체에 복합서버 지원여부 추가
+    - OnClose 콜백 함수로 오는 인자값을 Message에서 error로 변경
+    - 서버 코드 내부 로직 수정
 
 # 🙋‍ 개발자
 남대영 - wsnam0507@gmail.com
