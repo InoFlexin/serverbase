@@ -15,9 +15,10 @@ import (
 type MyMessage base.Message
 
 func (m MyMessage) OnMessageReceive(message *base.Message, client net.Conn) {
-	fmt.Println("on message receive: "+message.Json+" action: %d", message.Action)
+	fmt.Println("receive: " + message.Json + " key: " + message.Key)
 
-	base.Write(&base.Message{Json: "pong", Action: base.ON_MSG_RECEIVE}, client)
+	packetMessage := base.Message{Json: "pong", Key: base.GetServerKey(), Action: base.ON_MSG_RECEIVE}
+	base.Write(&packetMessage, client)
 }
 
 func (m MyMessage) OnConnect(message *base.Message, client net.Conn) {
