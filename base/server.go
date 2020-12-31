@@ -1,7 +1,7 @@
 package base
 
 import (
-	"../auth"
+	"github.com/InoFlexin/serverbase/auth"
 	"encoding/json"
 	"io"
 	"log"

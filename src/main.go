@@ -7,9 +7,9 @@ import (
 	"sync"
 	"time"
 
-	"../auth"
-	"../base"
-	"../client"
+	"github.com/InoFlexin/serverbase/auth"
+	"github.com/InoFlexin/serverbase/base"
+	"github.com/InoFlexin/serverbase/client"
 )
 
 //Override Server Message Type...

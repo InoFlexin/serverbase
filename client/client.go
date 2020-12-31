@@ -8,8 +8,8 @@ import (
 	"sync"
 	"time"
 
-	"../auth"
-	"../base"
+	"github.com/InoFlexin/serverbase/auth"
+	"github.com/InoFlexin/serverbase/base"
 )
 
 type ClientBoot struct {
