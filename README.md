@@ -115,6 +115,11 @@ func main() {
     - Boot구조체에 복합서버 지원여부 추가
     - OnClose 콜백 함수로 오는 인자값을 Message에서 error로 변경
     - 서버 코드 내부 로직 수정
+- v1.0.4
+    - 각 프록시간 식별자를 추가 base.Message.Key로 사용가능
+    - Session 구현 책임을 자식 모듈로 넘김
+    - SocketMessage 추가
+    - session.go에서 연결된 모듈들 키 조회 가능 (세션 구현은 자식모듈에서 해야함)
 
 # 🙋‍ 개발자
 남대영 - wsnam0507@gmail.com
