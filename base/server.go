@@ -1,6 +1,7 @@
 package base
 
 import (
+	"../auth"
 	"encoding/json"
 	"io"
 	"log"
@@ -19,13 +20,27 @@ type Boot struct {
 
 type Message struct {
 	Json   string
+	Key    string
 	Action int
+}
+
+type SocketMessage struct {
+	Packet Message
+	Sock   net.Conn
 }
 
 type SocketEvent interface {
 	OnMessageReceive(message *Message, client net.Conn)
 	OnConnect(message *Message, client net.Conn)
 	OnClose(err error)
+}
+
+var serverKey string = ""
+
+func WriteSockMessage(socketMessage *SocketMessage) {
+	socketMessage.Packet.Key = serverKey
+
+	Write(&socketMessage.Packet, socketMessage.Sock)
 }
 
 func Write(message *Message, client net.Conn) {
@@ -40,6 +55,17 @@ func Write(message *Message, client net.Conn) {
 	client.Write(e)
 }
 
+func PacketMarshal(message *Message) []byte {
+	e, err := json.Marshal(message)
+
+	if err != nil {
+		log.Println(err)
+		return make([]byte, 0)
+	}
+
+	return e
+}
+
 func PacketUnmarshal(data []byte) *Message {
 	message := Message{}
 	json.Unmarshal([]byte(data), &message)
@@ -47,35 +73,26 @@ func PacketUnmarshal(data []byte) *Message {
 	return &message
 }
 
-/*
-	Please running goroutine
-*/
-func Broadcast(message *Message) {
-	keys, values := GetSessions()
-	length := len(keys)
-
-	for i := 0; i < length; i++ {
-		conn := values[i]
-
-		Write(message, conn)
-	}
-}
-
 func _receiveAndHandle(buf []byte, connection net.Conn, boot *Boot, count int) {
 	var data = buf[:count]
 	message := PacketUnmarshal(data)
 
-	switch message.Action {
-	case ON_MSG_RECEIVE:
-		go boot.Callback.OnMessageReceive(message, connection)
-		break
-	case ON_CONNECT:
-		go boot.Callback.OnConnect(message, connection)
-		break
+	if message.Key != "" {
+		switch message.Action {
+		case ON_MSG_RECEIVE:
+			go boot.Callback.OnMessageReceive(message, connection)
+			break
+		case ON_CONNECT:
+			if GetKeyOrNil(message.Key) == "" {
+				AddNewKey(message.Key)
+				go boot.Callback.OnConnect(message, connection)
+			}
+			break
+		}
 	}
 }
 
-func receive(connection net.Conn, boot Boot) {
+func receive(connection net.Conn, boot Boot, serverKey string) {
 	buf := make([]byte, boot.ReceiveSize) //1kb
 
 	for {
@@ -84,7 +101,7 @@ func receive(connection net.Conn, boot Boot) {
 		if nil != error {
 			if io.EOF == error {
 				log.Printf("connection is closed from client; %v", connection.RemoteAddr().String())
-				RemoveSession(connection.RemoteAddr().String()) // if client connection refused, remove session.
+				RemoveKeyIfExsist(PacketUnmarshal(buf).Key) // if client connection refused, remove session.
 				go boot.Callback.OnClose(nil)
 			}
 
@@ -98,6 +115,10 @@ func receive(connection net.Conn, boot Boot) {
 	}
 }
 
+func GetServerKey() string {
+	return serverKey
+}
+
 func SetupComplexServer(boot Boot, wg *sync.WaitGroup) {
 	if boot.Complex {
 		wg.Done()
@@ -106,6 +127,7 @@ func SetupComplexServer(boot Boot, wg *sync.WaitGroup) {
 
 func ServerStart(boot Boot, wg *sync.WaitGroup) {
 	listener, error := net.Listen(boot.Protocol, boot.Port)
+	serverKey = auth.GenerateKey(20)
 	log.Println(boot)
 	log.Println(boot.ServerName + " get started port: " + boot.Port)
 
@@ -125,13 +147,6 @@ func ServerStart(boot Boot, wg *sync.WaitGroup) {
 			continue
 		}
 
-		id, sessionError := AddSession(conn.LocalAddr().String(), conn)
-
-		if sessionError == nil {
-			go receive(conn, boot)
-			log.Printf("Successfully session added id: " + id)
-		} else {
-			log.Fatal(sessionError)
-		}
+		go receive(conn, boot, serverKey)
 	}
 }

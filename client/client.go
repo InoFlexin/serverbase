@@ -8,7 +8,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/InoFlexin/serverbase/base"
+	"../auth"
+	"../base"
 )
 
 type ClientBoot struct {
@@ -20,9 +21,19 @@ type ClientBoot struct {
 }
 
 var server net.Conn = nil
+var clientKey string = ""
 
 func CreateError(errorMessage string) error {
 	return errors.New(errorMessage)
+}
+
+func Write(json string) {
+	message := &base.Message{Json: json, Key: clientKey, Action: base.ON_MSG_RECEIVE}
+	log.Println("write: " + clientKey)
+	e := base.PacketMarshal(message)
+	log.Println("write2: " + string(e))
+
+	server.Write(e)
 }
 
 func SendPing(duration time.Duration) error {
@@ -30,7 +41,7 @@ func SendPing(duration time.Duration) error {
 
 	if server != nil {
 		for {
-			base.Write(&base.Message{Json: "ping", Action: base.ON_MSG_RECEIVE}, server)
+			Write("ping")
 			time.Sleep(duration)
 		}
 	} else {
@@ -63,14 +74,20 @@ func Handle(boot *ClientBoot, conn net.Conn, wg *sync.WaitGroup) {
 	}
 }
 
+func GetClientKey() string {
+	return clientKey
+}
+
 func ConnectServer(boot *ClientBoot, wg *sync.WaitGroup) {
-	log.Println("Run")
 	conn, err := net.Dial(boot.Protocol, boot.HostAddr+boot.HostPort)
 	server = conn
-	boot.Callback.OnConnect(&base.Message{Json: "-connect", Action: base.ON_CONNECT}, conn)
+	clientKey = auth.GenerateKey(20)
+	base.Write(&base.Message{Json: "connect!", Key: clientKey, Action: base.ON_CONNECT}, conn)
+
+	defer conn.Close()
 
 	if err != nil {
-		log.Fatalf("faild to connec to server err %v", err)
+		log.Fatalf("faild to connected to server err %v", err)
 	}
 
 	wg.Done()                    //main에서 처리한 waitGroup은 done() 시킨다.
@@ -78,6 +95,4 @@ func ConnectServer(boot *ClientBoot, wg *sync.WaitGroup) {
 	handleWg.Add(1)
 	go Handle(boot, server, &handleWg)
 	handleWg.Wait()
-
-	defer conn.Close()
 }

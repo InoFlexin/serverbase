@@ -1,50 +1,52 @@
 package base
 
 import (
-	"errors"
-	"net"
+	"container/list"
 )
 
-var sessionMap map[string]net.Conn = map[string]net.Conn{}
+var keyList *list.List = list.New()
 
-func GetSessions() ([]string, []net.Conn) {
-	length := len(sessionMap)
-	keys := make([]string, 0, length)
-	values := make([]net.Conn, 0, length)
+func ContainsKey(clientKey string) (bool, *list.Element) {
+	compare := false
+	var find *list.Element = nil
 
-	for k, v := range sessionMap {
-		keys = append(keys, k)
-		values = append(values, v)
+	for i := keyList.Front(); i != nil; i.Next() {
+		if i.Value == clientKey {
+			compare = true
+			find = i
+			break
+		}
 	}
 
-	return keys, values
+	return compare, find
 }
 
-func RemoveSession(id string) {
-	val := sessionMap[id]
+func RemoveKeyIfExsist(clientKey string) {
+	contains, find := ContainsKey(clientKey)
 
-	if val != nil {
-		delete(sessionMap, id)
+	if contains {
+		keyList.Remove(find)
 	}
 }
 
-func AddSession(id string, conn net.Conn) (string, error) {
-	val := sessionMap[id]
+func GetKeyOrNil(clientKey string) string {
+	_, find := ContainsKey(clientKey)
 
-	if val != nil {
-		return id, errors.New(id + " is already added")
+	if find == nil {
+		return ""
 	}
-	sessionMap[id] = conn
 
-	return id, nil
+	return find.Value.(string)
 }
 
-func GetSession(id string) (net.Conn, error) {
-	val, exists := sessionMap[id]
+func AddNewKey(clientKey string) bool {
+	success := false
+	contains, _ := ContainsKey(clientKey)
 
-	if !exists {
-		return nil, errors.New(id + " is not found")
+	if !contains {
+		keyList.PushBack(clientKey)
+		success = true
 	}
 
-	return val, nil
+	return success
 }

@@ -7,8 +7,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/InoFlexin/serverbase/base"
-	"github.com/InoFlexin/serverbase/client"
+	"../auth"
+	"../base"
+	"../client"
 )
 
 //Override Server Message Type...
@@ -18,13 +19,14 @@ type (
 )
 
 func (m MyMessage) OnMessageReceive(message *base.Message, client net.Conn) {
-	fmt.Println("on message receive: "+message.Json+" action: %d", message.Action)
+	fmt.Println("receive: " + message.Json + " key: " + message.Key)
 
-	base.Write(&base.Message{Json: "pong", Action: base.ON_MSG_RECEIVE}, client)
+	packetMessage := base.Message{Json: "pong", Key: base.GetServerKey(), Action: base.ON_MSG_RECEIVE}
+	base.Write(&packetMessage, client)
 }
 
 func (m MyMessage) OnConnect(message *base.Message, client net.Conn) {
-	fmt.Println("on connect: "+message.Json+" action: %d", message.Action)
+	fmt.Println("on  Connect!" + message.Key)
 }
 
 func (m MyMessage) OnClose(err error) {
@@ -32,7 +34,7 @@ func (m MyMessage) OnClose(err error) {
 }
 
 func (m MyClientMessage) OnMessageReceive(message *base.Message, server net.Conn) {
-	fmt.Println("client on message receive: "+message.Json+" action: %d", message.Action)
+	fmt.Println("client receive: " + message.Json + " key: " + message.Key)
 }
 
 func (m MyClientMessage) OnConnect(message *base.Message, server net.Conn) {
@@ -45,6 +47,8 @@ func (m MyClientMessage) OnClose(err error) {
 
 func main() {
 	wg := sync.WaitGroup{} //synchronized goroutine
+
+	fmt.Println(auth.GenerateKey(10))
 
 	ev := MyMessage{}
 	boot := base.Boot{Protocol: "tcp", Port: ":5092", ServerName: "test_server", Callback: ev, ReceiveSize: 1024, Complex: true}
