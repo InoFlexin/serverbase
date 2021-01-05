@@ -69,7 +69,7 @@ func Handle(boot *ClientBoot, conn net.Conn, wg *sync.WaitGroup) {
 
 		if count > 0 {
 			data := buf[:count]
-			boot.Callback.OnMessageReceive(base.PacketUnmarshal(data), conn)
+			boot.Callback.OnMessageReceive(base.PacketUnmarshalToMessage(data), conn)
 		}
 	}
 }

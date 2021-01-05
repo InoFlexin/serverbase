@@ -1,12 +1,13 @@
 package base
 
 import (
-	"github.com/InoFlexin/serverbase/auth"
 	"encoding/json"
 	"io"
 	"log"
 	"net"
 	"sync"
+
+	"github.com/InoFlexin/serverbase/auth"
 )
 
 type Boot struct {
@@ -66,16 +67,23 @@ func PacketMarshal(message *Message) []byte {
 	return e
 }
 
-func PacketUnmarshal(data []byte) *Message {
+func PacketUnmarshalToMessage(data []byte) *Message {
 	message := Message{}
 	json.Unmarshal([]byte(data), &message)
 
 	return &message
 }
 
+func PacketUnmarshalToInterface(dataBytes []byte) map[string]interface{} {
+	var data map[string]interface{}
+	json.Unmarshal(dataBytes, &data)
+
+	return data
+}
+
 func _receiveAndHandle(buf []byte, connection net.Conn, boot *Boot, count int) {
 	var data = buf[:count]
-	message := PacketUnmarshal(data)
+	message := PacketUnmarshalToMessage(data)
 
 	if message.Key != "" {
 		switch message.Action {
@@ -101,7 +109,7 @@ func receive(connection net.Conn, boot Boot, serverKey string) {
 		if nil != error {
 			if io.EOF == error {
 				log.Printf("connection is closed from client; %v", connection.RemoteAddr().String())
-				RemoveKeyIfExsist(PacketUnmarshal(buf).Key) // if client connection refused, remove session.
+				RemoveKeyIfExsist(PacketUnmarshalToMessage(buf).Key) // if client connection refused, remove session.
 				go boot.Callback.OnClose(nil)
 			}
 
