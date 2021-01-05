@@ -81,7 +81,7 @@ func GetClientKey() string {
 func ConnectServer(boot *ClientBoot, wg *sync.WaitGroup) {
 	conn, err := net.Dial(boot.Protocol, boot.HostAddr+boot.HostPort)
 	server = conn
-	clientKey = auth.GenerateKey(20)
+	clientKey = auth.GetKey("client")
 	base.Write(&base.Message{Json: "connect!", Key: clientKey, Action: base.ON_CONNECT}, conn)
 
 	defer conn.Close()

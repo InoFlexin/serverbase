@@ -135,7 +135,7 @@ func SetupComplexServer(boot Boot, wg *sync.WaitGroup) {
 
 func ServerStart(boot Boot, wg *sync.WaitGroup) {
 	listener, error := net.Listen(boot.Protocol, boot.Port)
-	serverKey = auth.GenerateKey(20)
+	serverKey = auth.GetKey("server")
 	log.Println(boot)
 	log.Println(boot.ServerName + " get started port: " + boot.Port)
 

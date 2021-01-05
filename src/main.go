@@ -48,7 +48,8 @@ func (m MyClientMessage) OnClose(err error) {
 func main() {
 	wg := sync.WaitGroup{} //synchronized goroutine
 
-	fmt.Println(auth.GenerateKey(10))
+	auth.RegisterKey("server", auth.GenerateKey(20))
+	auth.RegisterKey("client", auth.GenerateKey(20))
 
 	ev := MyMessage{}
 	boot := base.Boot{Protocol: "tcp", Port: ":5092", ServerName: "test_server", Callback: ev, ReceiveSize: 1024, Complex: true}
